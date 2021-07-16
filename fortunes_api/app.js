@@ -2,13 +2,15 @@ const express = require('express');
 
 const fortunes = require('./data/fortunes.json');
 
+const fs = require('fs');
+
 
 const app = express();
 
-app.use(express.urlencoded({
-    extended: true
-  }));
-app.use(express.json());
+app.use(express.json())
+
+
+
 
 app.get('/fortunes', (req,res) => {
 
@@ -34,17 +36,54 @@ app.get('/fortunes/:id', (req,res) => {
 
 });    
 
+const writeFortunes = json => {
 
-app.post('/fortunes', (req,res) => {
+    fs.writeFile('./data/fortunes.json', JSON.stringify(json), err => console.log(err));
+}
 
-    console.log(req.body);
+app.post('/fortunes', (req, res) => {
+    const { message, lucky_number, spirit_animal } = req.body;
+  
+    const fortune_ids = fortunes.map(f => f.id);
+  
+    const new_fortunes = fortunes.concat({
+      id: (fortune_ids.length > 0 ? Math.max(...fortune_ids) : 0) + 1,
+      message,
+      lucky_number,
+      spirit_animal
+    });
+  
+    writeFortunes(new_fortunes);
+  
+    res.json(new_fortunes);
+  });
 
-    const {message, lucky_number, spirit_animal} = req.body;
+app.put('/fortunes/:id', (req,res) => {
 
-    const fortunes_ids = fortunes.map(f => f.id);
+    const {id} = req.params;
 
-    const fortune = {id: Math.max(...fortunes_ids), message, lucky_number, spirit_animal};
+    const old_fortune = fortunes.find(f => f.id == id); 
 
+    ['message','lucky_number','spirit_animal'].forEach(key => {
+
+        if(req.body[key]) old_fortune[key] = req.body[key];
+    });
+
+    writeFortunes(fortunes);
+
+    res.json(fortunes); 
+
+});
+
+app.delete('/fortunes/:id', (req,res) => {
+
+    const {id} = req.params;
+
+    const new_fortunes = fortunes.filter(f => f.id != id);
+
+    writeFortunes(new_fortunes);
+
+    res.json(new_fortunes);
 
 });
 
